@@ -1,12 +1,19 @@
-# -*- coding: utf-8 -*-
+# -- coding: utf-8 --
 """
 Created on Sun Dec 29 18:48:12 2019
 
 @author: Lenovo
 """
 import cv2
+import os
 
-face_cascade = cv2.CascadeClassifier('E:\\project\\main\\models\\haarcascade_frontalface_default.xml')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(script_dir, 'models', 'haarcascade_frontalface_default.xml')
+
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Model file not found: {model_path}")
+
+face_cascade = cv2.CascadeClassifier(model_path)
 
 cap = cv2.VideoCapture(0)
 

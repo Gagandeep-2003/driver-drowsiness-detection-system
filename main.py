@@ -1,39 +1,46 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov 22 11:04:42 2019
+import tkinter as tk
+from tkinter import ttk
+import subprocess
 
-@author: Lenovo
-"""
+face_proc = None  
 
-from tkinter import * 
-from tkinter.ttk import * 
-import subprocess    
 
-def blink():
-    subprocess.call(["python", "face-try.py"])
-    
-def lane():
+def run_face_detection():
+    global face_proc
+    face_proc = subprocess.Popen(["python", "face-try.py"])
+
+
+def run_blink_detection():
     subprocess.call(["python", "blinkDetect.py"])
 
-root = Tk()
-root.geometry('500x500')
-style = Style()
-style.configure('TButton', font =('calibri', 20, 'bold'), borderwidth = '2')
-#root.title('The game')
-root.geometry("500x500") 
-#tk.resizable(0, 0)
-frame = tk.Frame(root)
-frame.pack()
+def on_quit(root):
+    if face_proc and face_proc.poll() is None:
+        face_proc.terminate()
+    root.destroy()
 
 
-button1 = Button(frame, text="Face Detection", fg="red", command=blink,height=25, width=10)
-button1.pack(side=root.LEFT)
+def main():
+    root = tk.Tk()
+    root.title("Driver Drowsiness Detection System")
+    root.geometry("500x500")
 
-button2 = Button(frame, text="Blink Detection", fg="red",command=lane)
-button2.pack(side=root.RIGHT)
+    style = ttk.Style()
+    style.configure('TButton', font=('Calibri', 20, 'bold'), borderwidth=2)
 
-button3 = Button(frame, text="Quit", fg="red",command=root.destroy)
-button3.pack(side=root.BOTTOM)
+    frame = ttk.Frame(root, padding=20)
+    frame.pack(expand=True)
 
+    btn_face = ttk.Button(frame, text="Face Detection", command=run_face_detection)
+    btn_face.pack(side=tk.LEFT, padx=10, pady=10)
 
-root.mainloop()
+    btn_blink = ttk.Button(frame, text="Blink Detection", command=run_blink_detection)
+    btn_blink.pack(side=tk.RIGHT, padx=10, pady=10)
+
+    # btn_quit = ttk.Button(root, text="Quit", command=root.destroy)
+    btn_quit = ttk.Button(root, text="Quit", command=lambda: on_quit(root))
+    btn_quit.pack(side=tk.BOTTOM, pady=20)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
