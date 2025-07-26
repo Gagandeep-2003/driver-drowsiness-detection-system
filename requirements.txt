@@ -4,3 +4,9 @@ numpy
 scipy
 playsound
 matplotlib
+streamlit
+opencv-python
+streamlit-webrtc
+mediapipe
+numpy
+playsound; platform_system == "Windows"

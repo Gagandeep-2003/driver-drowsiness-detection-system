@@ -54,6 +54,25 @@ We welcome contributions to improve this project! To get started:
 5. Push your branch to your forked repo.
 6. Open a Pull Request describing your changes.
 
+---
+
+## 🌐 Streamlit Web App (New Feature!)
+
+This app version uses Streamlit + Mediapipe to detect drowsiness via webcam directly in the browser.
+
+### Usage:
+```bash
+streamlit run streamlit_app/streamlit_app.py
+
+Dependencies:
+Install using:
+pip install -r requirements.txt
+
+Features:
+Real-time Eye Aspect Ratio (EAR) monitoring
+Drowsiness warning overlay
+Web-based UI with live video
+
 **Note:** Please do not add a license section. A contributor will be adding license information soon.
 
 If you have any questions or need guidance, feel free to open an issue or ask in the discussions!
