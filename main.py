@@ -22,7 +22,7 @@ style.configure('TButton', font =('calibri', 20, 'bold'), borderwidth = '2')
 #root.title('The game')
 root.geometry("500x500") 
 #tk.resizable(0, 0)
-frame = tk.Frame(root)
+frame = Frame(root)
 frame.pack()
 
 
