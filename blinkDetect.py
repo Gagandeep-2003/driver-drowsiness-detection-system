@@ -20,6 +20,8 @@ FACE_DOWNSAMPLE_RATIO = 1.5
 RESIZE_HEIGHT = 460
 
 thresh = 0.27
+#SINCE MODEL WAS NOT AVAILABLE IN THE REPOSITORY, I DOWNLOADED THE OFFCIAL MODEL FROM THE WEBSITE AND USED THAT
+# DOWNLOAD LINK: https://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 modelPath = r"models\shape_predictor_68_face_landmarks.dat"
 sound_path = "alarm.wav"
 
@@ -248,7 +250,8 @@ if __name__ == "__main__":
 
             elif k == ord('q'):
                 break
-                #--ADDED FUNCTIONALITY OF BEING STOPPED BY CLICKING ON X
+
+            #ADDED FUNCTIONALITY OF TERMINATING ON CLICKING ON 'X'
             if cv2.getWindowProperty('Blink Detection', cv2.WND_PROP_VISIBLE) < 1:
                 break
 
