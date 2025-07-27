@@ -20,7 +20,7 @@ FACE_DOWNSAMPLE_RATIO = 1.5
 RESIZE_HEIGHT = 460
 
 thresh = 0.27
-modelPath = "models/shape_predictor_70_face_landmarks.dat"
+modelPath = r"models\shape_predictor_68_face_landmarks.dat"
 sound_path = "alarm.wav"
 
 detector = dlib.get_frontal_face_detector()
@@ -147,7 +147,7 @@ totalTime = 0.0
 validFrames = 0
 dummyFrames = 100
 
-print("Caliberation in Progress!")
+print("Calibration in Progress!")
 while(validFrames < dummyFrames):
     validFrames += 1
     t = time.time()
@@ -235,6 +235,8 @@ if __name__ == "__main__":
 
 
             cv2.imshow("Blink Detection", frame)
+            
+
             vid_writer.write(frame)
 
             k = cv2.waitKey(1) 
@@ -245,6 +247,9 @@ if __name__ == "__main__":
                 threadStatusQ.put(not ALARM_ON)
 
             elif k == ord('q'):
+                break
+                #--ADDED FUNCTIONALITY OF BEING STOPPED BY CLICKING ON X
+            if cv2.getWindowProperty('Blink Detection', cv2.WND_PROP_VISIBLE) < 1:
                 break
 
             # print("Time taken", time.time() - t)
