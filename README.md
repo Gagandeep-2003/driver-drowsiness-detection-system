@@ -48,7 +48,12 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```bash
    pip install -r requirements.txt
    ```
-3. **Run the application:**
+3. **Download the model:**
+
+    The dlib facial landmark model is required for blink detection. Download it from the link below, unzip it, and place the `shape_predictor_68_face_landmarks.dat` file inside the `/models` directory.
+    * **Download Link**: [shape_predictor_68_face_landmarks.dat](https://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2)
+
+4. **Run the application:**
    ```bash
    python main.py
    ```

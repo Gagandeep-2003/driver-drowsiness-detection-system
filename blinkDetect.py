@@ -20,7 +20,11 @@ FACE_DOWNSAMPLE_RATIO = 1.5
 RESIZE_HEIGHT = 460
 
 thresh = 0.27
-modelPath = "models/shape_predictor_70_face_landmarks.dat"
+
+# IMPORTANT: You must download the shape_predictor_68_face_landmarks.dat file from
+# https://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+# and place it in the 'models' folder
+modelPath = "models/shape_predictor_68_face_landmarks.dat"
 sound_path = "alarm.wav"
 
 detector = dlib.get_frontal_face_detector()
