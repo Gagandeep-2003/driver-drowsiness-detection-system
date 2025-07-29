@@ -3,9 +3,9 @@
 - Fatigue and drowsiness detection algorithm
 - Timely alerts to prevent the driver from falling asleep
 - Non-intrusive and easy to set up
-- **📱 Progressive Web App (PWA) support - Install like a native app!**
-- **🔄 Offline functionality with caching**
-- **🚀 Fast loading with optimized performance**on System
+- Progressive Web App (PWA) support - Install like a native app!
+- Offline functionality with caching
+- Fast loading with optimized performance on System
 
 <p align="center">
   <img src="https://img.shields.io/github/stars/Gagandeep-2003/Driver-Drowsiness-Detection-System?style=social" alt="GitHub stars" />
@@ -68,17 +68,35 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 ## Folder Structure
 ```
-Driver-Drowsiness-Detection-System/
-├── drowsiness_detector/
-│   ├── detector.py
-│   └── utils.py
-├── models/
-│   └── shape_predictor_68_face_landmarks.dat
-├── assets/
-│   └── demo.gif
-├── main.py
-├── requirements.txt
-├── README.md
+driver-drowsiness-detection-system/
+│
+├── main.py                  # Entry point for the system
+├── blinkDetect.py            # Drowsiness detection script
+├── lanedetection.py          # Lane detection module
+├── ui.py                     # User interface handling
+├── requirements.txt          # Python dependencies
+├── CONTRIBUTING.md           # Contribution guidelines
+├── DEPLOYMENT.md             # Deployment instructions
+├── PWA_README.md              # PWA installation & usage
+├── PWA_IMPLEMENTATION.md      # Technical details of PWA
+│
+├── models/                   # Pre-trained ML models
+│   └── haarcascade_frontalface_default.xml
+│
+├── streamlit_app/            # Web app (Streamlit + PWA)
+│   ├── streamlit_app.py
+│   ├── streamlit_app_pwa.py
+│   ├── manifest.json
+│   ├── sw.js
+│   └── icons/                # App icons for PWA
+│
+├── assets/                   # Images, audio, and test files
+│   ├── alarm.wav
+│   ├── alarm.mp3
+│   ├── eye.PNG
+│   ├── eye_aspect_ratio.PNG
+│   ├── face.PNG
+│   └── test_image.jpg
 
 ```
 
