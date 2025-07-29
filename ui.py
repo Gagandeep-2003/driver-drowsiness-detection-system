@@ -1,45 +1,48 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Dec 31 17:27:12 2019
-
 @author: Lenovo
 """
 
-from tkinter import *
+import tkinter as tk
 from tkinter.ttk import *
 import subprocess
+import sys
+from threading import Thread
+
+def run_script(script_name):
+    def target():
+        subprocess.call([sys.executable, script_name])
+    Thread(target=target).start()
 
 def face():
-    subprocess.call(["python", "face-try.py"])
-    
+    run_script("face-try.py")
+
 def blink():
-    subprocess.call(["python", "blinkDetect.py"])
-    
+    run_script("blinkDetect.py")
+
 def lane():
-    subprocess.call(["python", "lanedetection.py"])
-    
-root = Tk() 
-root.geometry('300x550') 
+    run_script("lanedetection.py")
+
+# GUI setup
+root = tk.Tk()
+root.geometry('300x550')
 root.title('Drowsiness Detection System')
 
-style = Style() 
-style.configure('TButton', font =('calibri', 20, 'bold'), borderwidth = '2') 
+style = Style()
+style.configure('TButton', font=('calibri', 16, 'bold'), borderwidth='2', padding=10)
 
+# Buttons
+btn1 = Button(root, text='Face Detection', command=face)
+btn1.pack(pady=40)
 
-# button 1 
-btn1 = Button(root, text = 'Face Detection', command = face) 
-btn1.grid(row =10, column = 0, padx = 30,pady=70) 
+btn2 = Button(root, text='Blink Detection', command=blink)
+btn2.pack(pady=20)
 
-# button 2 
-btn2 = Button(root, text = 'Blink Detection', command = blink) 
-btn2.grid(row = 13, column = 0,  padx = 65) 
+btn4 = Button(root, text='Lane Detection', command=lane)
+btn4.pack(pady=30)
 
-# button 2 
-btn4 = Button(root, text = 'Lane Detection', command = lane) 
-btn4.grid(row = 16, column = 0,  padx = 75,pady=70) 
-#button 3
-btn3 = Button(root, text = 'Quit', command = root.destroy) 
-btn3.grid(row = 20, column = 0,  padx = 45)
+btn3 = Button(root, text='Quit', command=root.destroy)
+btn3.pack(pady=30)
 
-    
-root.mainloop() 
+root.mainloop()
