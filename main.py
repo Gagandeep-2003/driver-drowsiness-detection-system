@@ -7,14 +7,14 @@ face_proc = None
 def run_face_detection():
     global face_proc
     try:
-        face_proc = subprocess.Popen(["python", "face-try.py"])
+        face_proc = subprocess.Popen([r"venv\Scripts\python.exe", "face-try.py"])
     except Exception as e:
         messagebox.showerror("Error", f"Failed to run face detection:\n{e}")
 
 
 def run_blink_detection():
     try:
-        subprocess.call(["python", "blinkDetect.py"])
+        subprocess.call([r"venv\Scripts\python.exe", "blinkDetect.py"])
     except Exception as e:
         messagebox.showerror("Error", f"Failed to run blink detection:\n{e}")
 

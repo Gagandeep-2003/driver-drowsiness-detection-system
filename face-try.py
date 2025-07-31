@@ -8,7 +8,7 @@ import cv2
 import sys
 
 # Load Haar cascade
-cascade_path = '/home/happy/gssoc/driver-drowsiness-detection-system/models/haarcascade_frontalface_default.xml'
+cascade_path = 'models/haarcascade_frontalface_default.xml'
 face_cascade = cv2.CascadeClassifier(cascade_path)
 
 # Check if cascade loaded successfully
