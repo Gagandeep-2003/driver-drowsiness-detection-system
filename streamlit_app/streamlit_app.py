@@ -85,9 +85,102 @@ class DrowsinessDetector(VideoTransformerBase):
         return img
 
 # Streamlit app
-st.set_page_config(page_title="Driver Drowsiness Detection", layout="centered")
+st.set_page_config(
+    page_title="Driver Drowsiness Detection", 
+    layout="centered",
+    page_icon="🚗",
+    initial_sidebar_state="collapsed"
+)
+
+# Add PWA support with custom HTML
+pwa_html = """
+<link rel="manifest" href="/app/static/manifest.json">
+<meta name="theme-color" content="#ff6b6b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DrowsinessDetect">
+<link rel="apple-touch-icon" href="/app/static/icons/icon-192x192.png">
+<meta name="msapplication-TileColor" content="#ff6b6b">
+<meta name="msapplication-TileImage" content="/app/static/icons/icon-144x144.png">
+
+<script>
+// Register service worker for PWA functionality
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/app/static/sw.js')
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful');
+            }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+
+// Add install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Show install button
+    const installButton = document.createElement('button');
+    installButton.textContent = '📱 Install App';
+    installButton.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #ff6b6b;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        z-index: 1000;
+        font-size: 14px;
+    `;
+    
+    installButton.addEventListener('click', () => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+                installButton.remove();
+            }
+            deferredPrompt = null;
+        });
+    });
+    
+    document.body.appendChild(installButton);
+});
+</script>
+"""
+
+st.markdown(pwa_html, unsafe_allow_html=True)
+
 st.title("🚗 Driver Drowsiness Detection")
 st.markdown("Detects eye closure and triggers an audio alert if drowsiness is detected.")
+
+# PWA Installation Instructions
+with st.expander("📱 Install as Mobile App", expanded=False):
+    st.markdown("""
+    **Install this app on your device for the best experience:**
+    
+    **On Mobile (Chrome/Safari):**
+    1. Tap the menu button (⋮ or share icon)
+    2. Select "Add to Home Screen" or "Install App"
+    3. Confirm installation
+    
+    **On Desktop (Chrome/Edge):**
+    1. Click the install icon in the address bar
+    2. Or use the "Install App" button above
+    3. Confirm installation
+    
+    **Benefits of installing:**
+    - ✅ Works offline
+    - ✅ Faster loading
+    - ✅ Full-screen experience
+    - ✅ App-like behavior
+    """)
 
 # Run webcam with Streamlit
 webrtc_streamer(

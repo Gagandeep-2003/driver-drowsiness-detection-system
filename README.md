@@ -1,4 +1,11 @@
-# Driver Drowsiness Detection System
+# Driver Drowsiness De## Key Features
+- Real-time monitoring of driver's eyes using a camera
+- Fatigue and drowsiness detection algorithm
+- Timely alerts to prevent the driver from falling asleep
+- Non-intrusive and easy to set up
+- Progressive Web App (PWA) support - Install like a native app!
+- Offline functionality with caching
+- Fast loading with optimized performance on System
 
 <p align="center">
   <img src="https://img.shields.io/github/stars/Gagandeep-2003/Driver-Drowsiness-Detection-System?style=social" alt="GitHub stars" />
@@ -66,17 +73,35 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 ## Folder Structure
 ```
-Driver-Drowsiness-Detection-System/
-├── drowsiness_detector/
-│   ├── detector.py
-│   └── utils.py
-├── models/
-│   └── shape_predictor_68_face_landmarks.dat
-├── assets/
-│   └── demo.gif
-├── main.py
-├── requirements.txt
-├── README.md
+driver-drowsiness-detection-system/
+│
+├── main.py                  # Entry point for the system
+├── blinkDetect.py            # Drowsiness detection script
+├── lanedetection.py          # Lane detection module
+├── ui.py                     # User interface handling
+├── requirements.txt          # Python dependencies
+├── CONTRIBUTING.md           # Contribution guidelines
+├── DEPLOYMENT.md             # Deployment instructions
+├── PWA_README.md              # PWA installation & usage
+├── PWA_IMPLEMENTATION.md      # Technical details of PWA
+│
+├── models/                   # Pre-trained ML models
+│   └── haarcascade_frontalface_default.xml
+│
+├── streamlit_app/            # Web app (Streamlit + PWA)
+│   ├── streamlit_app.py
+│   ├── streamlit_app_pwa.py
+│   ├── manifest.json
+│   ├── sw.js
+│   └── icons/                # App icons for PWA
+│
+├── assets/                   # Images, audio, and test files
+│   ├── alarm.wav
+│   ├── alarm.mp3
+│   ├── eye.PNG
+│   ├── eye_aspect_ratio.PNG
+│   ├── face.PNG
+│   └── test_image.jpg
 
 ```
 
@@ -91,22 +116,59 @@ We welcome contributions to improve this project! To get started:
 
 ---
 
+## 📋 Project Board & Roadmap
+
+We are actively tracking progress and assigning tasks for **GSSoC'25** in our GitHub Project Board.  
+You can see which issues are **To Do**, **In Progress**, or **Completed**, and pick one to start contributing.
+
+🚀 **[View the GSSoC 2025 Roadmap Project →](https://github.com/users/Gagandeep-2003/projects/1)**
+
+> ℹ️ To work on an issue:
+> 1. Comment on the issue stating your interest.
+> 2. We’ll assign it to you under the appropriate GSSoC’25 level.
+> 3. Track your progress via the Project Board.
+
 ## 🌐 Streamlit Web App (New Feature!)
 
 This app version uses Streamlit + Mediapipe to detect drowsiness via webcam directly in the browser.
 
 ### Usage:
 ```bash
+# Standard web app
 streamlit run streamlit_app/streamlit_app.py
+
+# Or run the enhanced PWA version
+streamlit run streamlit_app/streamlit_app_pwa.py
+```
+
+## 📱 Progressive Web App (PWA) Support
+
+**NEW!** This project now supports Progressive Web App functionality! Install it like a native app on your device.
+
+### PWA Features:
+- 📱 **Installable**: Add to home screen on mobile/desktop
+- 🚀 **Fast Loading**: Cached resources for better performance  
+- 🔄 **Offline Support**: Basic functionality without internet
+- 📲 **App-like Experience**: Full-screen, native app behavior
+
+### Quick PWA Installation:
+1. **Mobile**: Open in browser → Menu → "Add to Home Screen"
+2. **Desktop**: Look for install icon in address bar → Click "Install"
+
+📖 **[Complete PWA Guide](PWA_README.md)** - Detailed installation and usage instructions
 
 Dependencies:
 Install using:
+```bash
 pip install -r requirements.txt
+```
 
 Features:
-Real-time Eye Aspect Ratio (EAR) monitoring
-Drowsiness warning overlay
-Web-based UI with live video
+- Real-time Eye Aspect Ratio (EAR) monitoring
+- Drowsiness warning overlay
+- Web-based UI with live video
+- **PWA installable web app**
+- **Offline caching support**
 
 **Note:** Please do not add a license section. A contributor will be adding license information soon.
 

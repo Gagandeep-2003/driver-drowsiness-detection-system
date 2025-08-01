@@ -55,6 +55,18 @@ streamlit-webrtc>=0.45.0,<1.0.0
 mediapipe>=0.10.0,<1.0.0
 
 # ====================================================================
+# PWA (PROGRESSIVE WEB APP) DEPENDENCIES
+# ====================================================================
+# For generating PWA icons and assets
+Pillow>=8.0.0,<11.0.0
+
+# ====================================================================
+# WEB SERVING AND STATIC FILES
+# ====================================================================
+# Additional web server capabilities for PWA
+aiofiles>=0.7.0,<1.0.0  # For async file serving
+
+# ====================================================================
 # BUILT-IN PYTHON LIBRARIES (No installation required)
 # ====================================================================
 # - tkinter
