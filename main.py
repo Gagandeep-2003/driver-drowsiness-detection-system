@@ -1,20 +1,29 @@
-from tkinter import *
-from tkinter.ttk import *
+
+import tkinter as tk
+from tkinter import ttk, messagebox
 import subprocess
 
+face_proc = None  
+
+def run_face_detection():
+    global face_proc
+    try:
+        face_proc = subprocess.Popen(["python", "face-try.py"])
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to run face detection:\n{e}")
 
 
-root = Tk()
-root.geometry('500x500')
-style = Style()
+def run_blink_detection():
+    try:
+        subprocess.call(["python", "blinkDetect.py"])
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to run blink detection:\n{e}")
 
-style.configure('TButton', font =('calibri', 20, 'bold'), borderwidth = '2')
-#root.title('The game')
-root.geometry("500x500") 
-#tk.resizable(0, 0)
-frame = Frame(root)
-frame.pack()
 
+def on_quit(root):
+    if face_proc and face_proc.poll() is None:
+        face_proc.terminate()
+    root.destroy()
 
 
 
@@ -34,16 +43,37 @@ def on_quit():
         except subprocess.TimeoutExpired:
             current_process.kill()  # Force kill if still running
     root.destroy()  # Close the GUI
-frame = Frame(root)
-frame.pack(side=TOP, pady=40)
+    
+def main():
+    root = tk.Tk()
+    root.title("Driver Drowsiness Detection System")
+    root.geometry("500x500")
 
-button1 = Button(frame, text="Face Detection", command=face)
-button1.pack(side=LEFT, padx=10, pady=10)
+    style = ttk.Style()
+    style.configure('TButton', font=('Calibri', 20, 'bold'), borderwidth=2)
 
-button2 = Button(frame, text="Blink Detection", command=blink)
-button2.pack(side=LEFT, padx=10, pady=10)
+    frame = ttk.Frame(root, padding=20)
+    frame.pack(expand=True)
+    
+    
+    frame = Frame(root)
+    frame.pack(side=TOP, pady=40)
 
-button3 = Button(root, text="Quit", command=root.destroy)
-button3.pack(side=BOTTOM, pady=30)
+    button1 = Button(frame, text="Face Detection", command=face)
+    button1.pack(side=LEFT, padx=10, pady=10)
 
-root.mainloop()
+    button2 = Button(frame, text="Blink Detection", command=blink)
+    button2.pack(side=LEFT, padx=10, pady=10)
+
+    button3 = Button(root, text="Quit", command=root.destroy)
+    button3.pack(side=BOTTOM, pady=30)
+
+    root.mainloop()
+
+
+    
+
+    
+
+if __name__ == "__main__":
+    main()

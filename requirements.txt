@@ -1,6 +1,89 @@
-opencv-python
-dlib
-numpy
-scipy
-playsound
-matplotlib
+# ====================================================================
+# DRIVER DROWSINESS DETECTION SYSTEM - REQUIREMENTS
+# ====================================================================
+# This file contains all the Python dependencies required to run the
+# driver drowsiness detection system. Each package is carefully versioned
+# to ensure compatibility and stable performance.
+#
+# INSTALLATION INSTRUCTIONS:
+# 1. Create a virtual environment (recommended):
+#    python -m venv drowsiness_env
+#    source drowsiness_env/bin/activate  # On Windows: drowsiness_env\Scripts\activate
+# 
+# 2. Install all dependencies:
+#    pip install -r requirements.txt
+#
+# 3. Additional setup for dlib (if installation fails):
+#    - Install cmake: pip install cmake
+#    - Install dlib: pip install dlib
+# ====================================================================
+
+# ====================================================================
+# COMPUTER VISION AND IMAGE PROCESSING
+# ====================================================================
+opencv-python>=4.5.0,<5.0.0
+# Optional: for GPU support
+# opencv-contrib-python
+
+# ====================================================================
+# FACIAL LANDMARK DETECTION AND SHAPE PREDICTION
+# ====================================================================
+dlib>=19.22.0,<20.0.0
+
+# ====================================================================
+# NUMERICAL COMPUTING AND MATHEMATICAL OPERATIONS
+# ====================================================================
+numpy>=1.19.0,<2.0.0
+scipy>=1.7.0,<2.0.0
+
+# ====================================================================
+# AUDIO PROCESSING AND ALERTS
+# ====================================================================
+playsound>=1.2.2,<2.0.0
+playsound; platform_system == "Windows"  # For compatibility on Windows
+
+# ====================================================================
+# DATA VISUALIZATION AND PLOTTING
+# ====================================================================
+matplotlib>=3.3.0,<4.0.0
+
+# ====================================================================
+# STREAMLIT WEB APP DEPENDENCIES
+# ====================================================================
+streamlit>=1.25.0,<2.0.0
+streamlit-webrtc>=0.45.0,<1.0.0
+mediapipe>=0.10.0,<1.0.0
+
+# ====================================================================
+# PWA (PROGRESSIVE WEB APP) DEPENDENCIES
+# ====================================================================
+# For generating PWA icons and assets
+Pillow>=8.0.0,<11.0.0
+
+# ====================================================================
+# WEB SERVING AND STATIC FILES
+# ====================================================================
+# Additional web server capabilities for PWA
+aiofiles>=0.7.0,<1.0.0  # For async file serving
+
+# ====================================================================
+# BUILT-IN PYTHON LIBRARIES (No installation required)
+# ====================================================================
+# - tkinter
+# - threading
+# - queue
+# - subprocess
+# - time
+# - sys
+
+# ====================================================================
+# COMPATIBILITY NOTES
+# ====================================================================
+# Python Version: Tested with Python 3.7 - 3.10
+# Operating Systems: Windows 10/11, macOS 10.15+, Ubuntu 18.04+
+# 
+# TROUBLESHOOTING:
+# - If dlib installation fails, install Visual Studio Build Tools (Windows)
+# - For macOS users, install Xcode command line tools: xcode-select --install
+# - Linux users may need: sudo apt-get install cmake libopenblas-dev liblapack-dev
+# ====================================================================
