@@ -181,7 +181,6 @@ if __name__ == "__main__":
             rightEAR = eye_aspect_ratio([landmarks[i] for i in rightEyeIndex])
             ear = (leftEAR + rightEAR) / 2.0
 
-
             if ear < thresh:
                 if not is_eye_closed:
                     eye_closed_start_time = time.time()
