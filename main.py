@@ -1,50 +1,28 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter.ttk import *
 import subprocess
+import sys
 
-face_proc = None  
+def blink():
+    subprocess.call([sys.executable, "face-try.py"])
 
-def run_face_detection():
-    global face_proc
-    try:
-        face_proc = subprocess.Popen(["python", "face-try.py"])
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to run face detection:\n{e}")
+def lane():
+    subprocess.call([sys.executable, "blinkDetect.py"])
 
+root = tk.Tk()
+root.title("Driver Alert System")
+root.geometry("500x500")
 
-def run_blink_detection():
-    try:
-        subprocess.call(["python", "blinkDetect.py"])
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to run blink detection:\n{e}")
+frame = tk.Frame(root)
+frame.pack(pady=50)
 
-def on_quit(root):
-    if face_proc and face_proc.poll() is None:
-        face_proc.terminate()
-    root.destroy()
+button1 = tk.Button(frame, text="Face Detection", fg="red", command=blink, height=2, width=20)
+button1.pack(side=tk.LEFT, padx=10)
 
+button2 = tk.Button(frame, text="Blink Detection", fg="red", command=lane, height=2, width=20)
+button2.pack(side=tk.RIGHT, padx=10)
 
-def main():
-    root = tk.Tk()
-    root.title("Driver Drowsiness Detection System")
-    root.geometry("500x500")
+button3 = tk.Button(root, text="Quit", fg="red", command=root.destroy, height=2, width=20)
+button3.pack(side=tk.BOTTOM, pady=20)
 
-    style = ttk.Style()
-    style.configure('TButton', font=('Calibri', 20, 'bold'), borderwidth=2)
-
-    frame = ttk.Frame(root, padding=20)
-    frame.pack(expand=True)
-
-    btn_face = ttk.Button(frame, text="Face Detection", command=run_face_detection)
-    btn_face.pack(side=tk.LEFT, padx=10, pady=10)
-
-    btn_blink = ttk.Button(frame, text="Blink Detection", command=run_blink_detection)
-    btn_blink.pack(side=tk.RIGHT, padx=10, pady=10)
-
-    btn_quit = ttk.Button(root, text="Quit", command=lambda: on_quit(root))
-    btn_quit.pack(side=tk.BOTTOM, pady=20)
-
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
+root.mainloop()
