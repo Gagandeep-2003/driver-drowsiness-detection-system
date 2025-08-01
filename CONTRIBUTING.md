@@ -8,6 +8,7 @@ First off, thank you for considering contributing to this project! Your help is 
 
 ## 🛠️ Project Setup
 Follow these steps to get the project running on your local machine.
+
 ### 1. **Fork and Clone**
 1.  **Fork the repository**: Click the `Fork` button on the top right of the repo.
 2.  **Clone your fork**:
@@ -35,8 +36,9 @@ Follow these steps to get the project running on your local machine.
     ```bash
     pip install -r requirements.txt
     ```
-        
-3.  **Download the dlib model**: The blink detection feature requires a pre-trained model.
+
+3.  **Download the dlib facial landmark model**  
+    The blink detection feature requires a pre-trained model.
     * Download the file from [this link](https://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2).
     * Unzip it and place the `shape_predictor_68_face_landmarks.dat` file inside the `/models` directory.
 
@@ -73,6 +75,7 @@ Follow these steps to get the project running on your local machine.
 * Keep your code clean, readable, and well-commented where necessary.
 * Follow the existing naming conventions and code style.
 * Ensure each pull request addresses only one feature or bug fix.
+* Comment your code where needed.
 
 ## 🙌 Need Help?
 
