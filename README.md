@@ -1,4 +1,4 @@
-# Driver Drowsiness De## Key Features
+# Driver Drowsiness Detection Key Features
 - Real-time monitoring of driver's eyes using a camera
 - Fatigue and drowsiness detection algorithm
 - Timely alerts to prevent the driver from falling asleep
