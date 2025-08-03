@@ -7,6 +7,7 @@ Created on Sun Dec 29 18:48:12 2019
 import cv2
 import sys
 
+
 # Load Haar cascade
 cascade_path = '/home/happy/gssoc/driver-drowsiness-detection-system/models/haarcascade_frontalface_default.xml'
 face_cascade = cv2.CascadeClassifier(cascade_path)
@@ -43,15 +44,19 @@ try:
         for (x, y, w, h) in faces:
             cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3)
 
+
         cv2.imshow('Face Detection', img)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             print("[INFO] Exiting on user request.")
             break
 
-except KeyboardInterrupt:
-    print("\n[INFO] Exiting on Ctrl+C")
 
-finally:
-    cap.release()
-    cv2.destroyAllWindows()
+    cv2.imshow('Face Detection', img)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    #ADDED FUNCTIONALITY OF TERMINATING BY CLICKING ON 'X'
+    if cv2.getWindowProperty('Face Detection', cv2.WND_PROP_VISIBLE) < 1:
+        break       
+cap.release()
+cv2.destroyAllWindows()
