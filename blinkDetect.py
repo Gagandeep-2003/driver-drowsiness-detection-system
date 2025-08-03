@@ -14,6 +14,7 @@ from scipy.spatial import distance as dist
 from threading import Thread
 import playsound
 import queue
+from datetime import datetime
 
 
 FACE_DOWNSAMPLE_RATIO = 1.5
@@ -41,6 +42,55 @@ drowsyTime = 1.5  #1200ms
 ALARM_ON = False
 GAMMA = 1.5
 threadStatusQ = queue.Queue()
+
+# Phase 2: Session tracking variables (temporary until SessionManager is ready)
+current_ear = 0.0
+session_ear_values = []
+session_alerts = 0
+session_start_time = None
+session_active = False
+
+# Temporary Session Tracker - will be replaced by real SessionManager
+class TempSessionTracker:
+    def __init__(self):
+        global session_start_time, session_active
+        session_start_time = datetime.now()
+        session_active = True
+        print(f"Session started at: {session_start_time}")
+    
+    def add_ear_value(self, ear_value):
+        global session_ear_values, current_ear
+        current_ear = ear_value
+        timestamp = datetime.now()
+        session_ear_values.append({
+            "value": round(ear_value, 4),
+            "timestamp": timestamp.isoformat()
+        })
+    
+    def add_alert(self):
+        global session_alerts
+        session_alerts += 1
+        timestamp = datetime.now()
+        print(f"Alert #{session_alerts} triggered at: {timestamp}")
+    
+    def end_session(self):
+        global session_start_time, session_active
+        if session_active:
+            end_time = datetime.now()
+            duration = (end_time - session_start_time).total_seconds() / 60
+            avg_ear = sum(item["value"] for item in session_ear_values) / len(session_ear_values) if session_ear_values else 0
+            
+            print(f"\n=== Session Summary ===")
+            print(f"Duration: {duration:.2f} minutes")
+            print(f"Total EAR readings: {len(session_ear_values)}")
+            print(f"Average EAR: {avg_ear:.4f}")
+            print(f"Alerts triggered: {session_alerts}")
+            print(f"Total blinks: {blinkCount}")
+            
+            session_active = False
+
+# Initialize session tracker
+session_tracker = None
 
 invGamma = 1.0/GAMMA
 table = np.array([((i / 255.0) ** invGamma) * 255 for i in range(0, 256)]).astype("uint8")
@@ -76,6 +126,7 @@ def eye_aspect_ratio(eye):
 
 
 def checkEyeStatus(landmarks):
+    global session_tracker, current_ear
     mask = np.zeros(frame.shape[:2], dtype = np.float32)
     
     hullLeftEye = []
@@ -95,6 +146,9 @@ def checkEyeStatus(landmarks):
     rightEAR = eye_aspect_ratio(hullRightEye)
 
     ear = (leftEAR + rightEAR) / 2.0
+    
+    if session_tracker:
+        session_tracker.add_ear_value(ear)
 
     eyeStatus = 1          # 1 = Open, 0 = closed
     if (ear < thresh):
@@ -103,7 +157,7 @@ def checkEyeStatus(landmarks):
     return eyeStatus  
 
 def checkBlinkStatus(eyeStatus):
-    global state, blinkCount, drowsy
+    global state, blinkCount, drowsy, session_tracker
     if(state >= 0 and state <= falseBlinkLimit):
         if(eyeStatus):
             state = 0
@@ -125,9 +179,15 @@ def checkBlinkStatus(eyeStatus):
             state = 0
             drowsy = 3
             blinkCount += 1
+            # Phase 2: Track alert when drowsiness is detected
+            if session_tracker:
+                session_tracker.add_alert()
 
         else:
             drowsy = 3
+            # Phase 2: Track alert when drowsiness persists
+            if session_tracker:
+                session_tracker.add_alert()
 
 def getLandmarks(im):
     imSmall = cv2.resize(im, None, 
@@ -147,6 +207,44 @@ def getLandmarks(im):
     points = []
     [points.append((p.x, p.y)) for p in predictor(im, newRect).parts()]
     return points
+
+# Phase 2: Getter functions for external access (for session_history.py)
+def get_current_ear():
+    """Get the current EAR value"""
+    return current_ear
+
+def get_current_blink_count():
+    """Get the current blink count"""
+    return blinkCount
+
+def get_session_data():
+    """Get all current session data"""
+    return {
+        'ear': current_ear,
+        'blink_count': blinkCount,
+        'alerts': session_alerts,
+        'drowsy_state': drowsy,
+        'eye_state': state,
+        'session_active': session_active
+    }
+
+def get_session_ear_values():
+    """Get all EAR values collected in current session"""
+    return session_ear_values
+
+def start_new_session():
+    """Start a new tracking session"""
+    global session_tracker
+    if session_tracker:
+        session_tracker.end_session()
+    session_tracker = TempSessionTracker()
+
+def end_current_session():
+    """End the current tracking session"""
+    global session_tracker
+    if session_tracker:
+        session_tracker.end_session()
+        session_tracker = None
 
 capture = cv2.VideoCapture(0)
 
@@ -200,6 +298,9 @@ print("Current SPF (seconds per frame) is {:.2f} ms".format(spf * 1000))
 drowsyLimit = drowsyTime/spf
 falseBlinkLimit = blinkTime/spf
 print("drowsy limit: {}, false blink limit: {}".format(drowsyLimit, falseBlinkLimit))
+
+# Phase 2: Start session tracking
+session_tracker = TempSessionTracker()
 
 if __name__ == "__main__":
     vid_writer = cv2.VideoWriter('output-low-light-2.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 15, (frame.shape[1],frame.shape[0]))
@@ -268,6 +369,10 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(e)
+
+    # Phase 2: End session when detection stops
+    if session_tracker:
+        session_tracker.end_session()
 
     capture.release()
     vid_writer.release()
