@@ -17,7 +17,9 @@ import math
 from collections import deque
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+import json
 
 # Configuration Constants
 FACE_DOWNSAMPLE_RATIO = 0.5
@@ -39,8 +41,14 @@ modelPath = "models/shape_predictor_68_face_landmarks.dat"
 sound_path = "alarm.wav"
 
 # Initialize dlib detectors
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(modelPath)
+try:
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(modelPath)
+    print("✅ Facial detection models loaded successfully")
+except Exception as e:
+    print(f"❌ Error loading models: {e}")
+    print("Please ensure the shape_predictor_68_face_landmarks.dat file is in the models/ directory")
+    sys.exit(1)
 
 # Eye landmark indices
 leftEyeIndex = [36, 37, 38, 39, 40, 41]
@@ -64,7 +72,6 @@ drunk_indicators = {
     'droopy_eyelids': False
 }
 drunk_alert_sent = False
-emergency_contacts = ["emergency@example.com"]  # Add real email addresses
 
 # Session tracking variables
 current_ear = 0.0
@@ -72,6 +79,22 @@ session_ear_values = []
 session_alerts = 0
 session_start_time = None
 session_active = False
+
+# Load emergency configuration
+def load_emergency_config():
+    """Load emergency contacts and email configuration"""
+    try:
+        with open("emergency_config.json", 'r') as f:
+            config = json.load(f)
+        return config["emergency_contacts"], config["email_settings"]
+    except Exception as e:
+        print(f"Warning: Could not load emergency config: {e}")
+        return ["emergency@example.com"], {
+            "sender_email": "your_email@gmail.com", 
+            "sender_password": "your_app_password"
+        }
+
+emergency_contacts, email_settings = load_emergency_config()
 
 # Gamma correction setup
 invGamma = 1.0/GAMMA
@@ -85,11 +108,14 @@ class SessionTracker:
         session_start_time = datetime.now()
         session_active = True
         self.drunk_alerts = 0
-        print(f"Enhanced Detection Session started at: {session_start_time}")
+        self.impairment_events = []
+        self.total_frames = 0
+        print(f"📊 Enhanced Detection Session started at: {session_start_time.strftime('%H:%M:%S')}")
     
     def add_ear_value(self, ear_value):
         global session_ear_values, current_ear
         current_ear = ear_value
+        self.total_frames += 1
         timestamp = datetime.now()
         session_ear_values.append({
             "value": round(ear_value, 4),
@@ -100,28 +126,61 @@ class SessionTracker:
         global session_alerts
         session_alerts += 1
         timestamp = datetime.now()
-        print(f"Drowsiness Alert #{session_alerts} at: {timestamp}")
+        print(f"😴 Drowsiness Alert #{session_alerts} at: {timestamp.strftime('%H:%M:%S')}")
     
-    def add_drunk_alert(self):
+    def add_drunk_alert(self, indicators):
         self.drunk_alerts += 1
         timestamp = datetime.now()
-        print(f"Impairment Alert #{self.drunk_alerts} at: {timestamp}")
+        event = {
+            "timestamp": timestamp.isoformat(),
+            "indicators": indicators.copy(),
+            "alert_number": self.drunk_alerts
+        }
+        self.impairment_events.append(event)
+        print(f"🚨 Impairment Alert #{self.drunk_alerts} at: {timestamp.strftime('%H:%M:%S')}")
+        print(f"   Active indicators: {[k for k, v in indicators.items() if v]}")
+    
+    def get_session_stats(self):
+        if not session_ear_values:
+            return {}
+        
+        ear_values = [item["value"] for item in session_ear_values]
+        return {
+            "avg_ear": np.mean(ear_values),
+            "min_ear": np.min(ear_values),
+            "max_ear": np.max(ear_values),
+            "total_frames": self.total_frames,
+            "drowsy_alerts": session_alerts,
+            "impairment_alerts": self.drunk_alerts,
+            "total_blinks": blinkCount
+        }
     
     def end_session(self):
         global session_start_time, session_active
         if session_active:
             end_time = datetime.now()
-            duration = (end_time - session_start_time).total_seconds() / 60
-            avg_ear = sum(item["value"] for item in session_ear_values) / len(session_ear_values) if session_ear_values else 0
+            duration_minutes = (end_time - session_start_time).total_seconds() / 60
+            stats = self.get_session_stats()
             
-            print(f"\n=== Enhanced Detection Session Summary ===")
-            print(f"Duration: {duration:.2f} minutes")
-            print(f"Total EAR readings: {len(session_ear_values)}")
-            print(f"Average EAR: {avg_ear:.4f}")
-            print(f"Drowsiness alerts: {session_alerts}")
-            print(f"Impairment alerts: {self.drunk_alerts}")
-            print(f"Total blinks: {blinkCount}")
+            print("\n" + "="*60)
+            print("🏁 ENHANCED DETECTION SESSION SUMMARY")
+            print("="*60)
+            print(f"⏱️  Session Duration: {duration_minutes:.2f} minutes")
+            print(f"📊 Total Frames Processed: {stats.get('total_frames', 0):,}")
+            print(f"👁️  Average EAR: {stats.get('avg_ear', 0):.4f}")
+            print(f"👁️  EAR Range: {stats.get('min_ear', 0):.4f} - {stats.get('max_ear', 0):.4f}")
+            print(f"😴 Drowsiness Alerts: {stats.get('drowsy_alerts', 0)}")
+            print(f"🚨 Impairment Alerts: {stats.get('impairment_alerts', 0)}")
+            print(f"👀 Total Blinks Detected: {stats.get('total_blinks', 0)}")
             
+            if self.impairment_events:
+                print(f"🔍 Impairment Event Details:")
+                for event in self.impairment_events:
+                    indicators = [k for k, v in event['indicators'].items() if v]
+                    timestamp = datetime.fromisoformat(event['timestamp']).strftime('%H:%M:%S')
+                    print(f"   • Alert #{event['alert_number']} at {timestamp}: {', '.join(indicators)}")
+            
+            print("="*60)
             session_active = False
 
 def gamma_correction(image):
@@ -144,8 +203,17 @@ def soundAlert(path, threadStatusQ):
         try:
             playsound.playsound(path)
         except Exception as e:
-            print(f"Error playing sound: {e}")
-            traceback.print_exc()
+            print(f"🔊 Audio alert error: {e}")
+            # Try alternative audio playback methods
+            try:
+                import os
+                if os.name == 'nt':  # Windows
+                    import winsound
+                    winsound.PlaySound(path, winsound.SND_FILENAME)
+                else:  # Linux/Mac
+                    os.system(f"aplay {path} 2>/dev/null || afplay {path} 2>/dev/null")
+            except:
+                print("⚠️  Could not play audio alert")
             break
 
 def eye_aspect_ratio(eye):
@@ -198,7 +266,7 @@ def get_head_pose(landmarks, img_shape):
             rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
             angles = rotation_matrix_to_euler_angles(rotation_matrix)
             return angles
-    except:
+    except Exception as e:
         pass
     
     return [0, 0, 0]
@@ -229,44 +297,49 @@ def detect_head_sway(angles):
     positions_array = np.array(head_positions)
     variance = np.var(positions_array, axis=0)
     
+    # Check for excessive movement in any direction
     excessive_movement = any(var > HEAD_MOVEMENT_THRESHOLD**2 for var in variance)
     return excessive_movement
 
 def analyze_eye_redness(eye_region):
     """Analyze eye region for redness indicating impairment"""
-    if eye_region.size == 0:
+    if eye_region.size == 0 or eye_region.shape[0] < 5 or eye_region.shape[1] < 5:
         return False
     
-    hsv = cv2.cvtColor(eye_region, cv2.COLOR_BGR2HSV)
-    
-    # Define red color range
-    lower_red1 = np.array([0, 50, 50])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([170, 50, 50])
-    upper_red2 = np.array([180, 255, 255])
-    
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    red_mask = mask1 + mask2
-    
-    red_pixels = cv2.countNonZero(red_mask)
-    total_pixels = eye_region.shape[0] * eye_region.shape[1]
-    red_ratio = red_pixels / total_pixels if total_pixels > 0 else 0
-    
-    return red_ratio > RED_EYE_THRESHOLD
+    try:
+        hsv = cv2.cvtColor(eye_region, cv2.COLOR_BGR2HSV)
+        
+        # Define red color ranges in HSV
+        lower_red1 = np.array([0, 50, 50])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([170, 50, 50])
+        upper_red2 = np.array([180, 255, 255])
+        
+        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        red_mask = mask1 + mask2
+        
+        red_pixels = cv2.countNonZero(red_mask)
+        total_pixels = eye_region.shape[0] * eye_region.shape[1]
+        red_ratio = red_pixels / total_pixels if total_pixels > 0 else 0
+        
+        return red_ratio > RED_EYE_THRESHOLD
+    except Exception as e:
+        return False
 
 def detect_delayed_blink(ear, current_time):
     """Detect delayed blinking patterns"""
-    global blink_start_time
+    if not hasattr(detect_delayed_blink, 'blink_start_time'):
+        detect_delayed_blink.blink_start_time = None
     
     if ear < thresh:
-        if 'blink_start_time' not in globals():
-            blink_start_time = current_time
+        if detect_delayed_blink.blink_start_time is None:
+            detect_delayed_blink.blink_start_time = current_time
     else:
-        if 'blink_start_time' in globals():
-            duration = current_time - blink_start_time
+        if detect_delayed_blink.blink_start_time is not None:
+            duration = current_time - detect_delayed_blink.blink_start_time
             blink_durations.append(duration)
-            del globals()['blink_start_time']
+            detect_delayed_blink.blink_start_time = None
     
     if len(blink_durations) >= 3:
         avg_duration = np.mean(list(blink_durations))
@@ -283,10 +356,10 @@ def detect_droopy_eyelids(landmarks):
     right_ear = eye_aspect_ratio(right_eye_landmarks)
     avg_ear = (left_ear + right_ear) / 2.0
     
-    # Eyes partially closed but not blinking
+    # Eyes partially closed but not blinking (between normal open and closed)
     return 0.15 < avg_ear < 0.22
 
-def send_emergency_alert():
+def send_emergency_alert(alert_type="IMPAIRMENT", severity="HIGH"):
     """Send emergency email alert for severe impairment"""
     global drunk_alert_sent
     
@@ -296,45 +369,76 @@ def send_emergency_alert():
     def send_email():
         global drunk_alert_sent
         try:
-            # Configure email settings (replace with your settings)
-            sender_email = "your_email@gmail.com"
-            password = "your_app_password"
+            sender_email = email_settings["sender_email"]
+            password = email_settings["sender_password"]
             
-            subject = "URGENT: Driver Impairment Alert"
+            message = MIMEMultipart()
+            message["From"] = sender_email
+            message["Subject"] = f"🚨 URGENT: Driver {alert_type} Alert - {severity} Priority"
+            
+            # Get current session stats
+            stats = session_tracker.get_session_stats() if 'session_tracker' in globals() else {}
+            
             body = f"""
-            EMERGENCY ALERT: Driver Impairment Detected
-            
-            Time: {time.strftime('%Y-%m-%d %H:%M:%S')}
-            
-            Detected Indicators:
-            - Head Sway: {'Yes' if drunk_indicators['head_sway'] else 'No'}
-            - Delayed Blinking: {'Yes' if drunk_indicators['delayed_blink'] else 'No'}
-            - Red Eyes: {'Yes' if drunk_indicators['red_eyes'] else 'No'}
-            - Droopy Eyelids: {'Yes' if drunk_indicators['droopy_eyelids'] else 'No'}
-            - Drowsiness: {'Yes' if drowsy else 'No'}
-            
-            Immediate attention required!
+🚨 EMERGENCY ALERT: Driver Impairment Detected 🚨
+
+⏰ Alert Time: {time.strftime('%Y-%m-%d %H:%M:%S')}
+🔍 Alert Type: {alert_type}
+⚠️  Severity Level: {severity}
+
+📊 Current Detection Status:
+{'='*50}
+🎯 Active Impairment Indicators:
+• Head Sway/Movement: {'✅ DETECTED' if drunk_indicators['head_sway'] else '❌ Normal'}
+• Delayed Blinking: {'✅ DETECTED' if drunk_indicators['delayed_blink'] else '❌ Normal'}
+• Eye Redness: {'✅ DETECTED' if drunk_indicators['red_eyes'] else '❌ Normal'}
+• Droopy Eyelids: {'✅ DETECTED' if drunk_indicators['droopy_eyelids'] else '❌ Normal'}
+• Drowsiness State: {'✅ ACTIVE' if drowsy else '❌ Alert'}
+
+📈 Session Statistics:
+• Current EAR Value: {current_ear:.4f}
+• Total Drowsiness Alerts: {stats.get('drowsy_alerts', 0)}
+• Total Impairment Alerts: {stats.get('impairment_alerts', 0)}
+• Detected Blinks: {stats.get('total_blinks', 0)}
+
+⚠️  IMMEDIATE ACTION RECOMMENDED ⚠️
+
+This is an automated alert from the Enhanced Driver Detection System.
+The system has detected concerning patterns that may indicate driver impairment.
+
+🔧 System Information:
+• Detection Algorithm: Enhanced Multi-Modal Analysis
+• Confidence Level: High
+• Monitoring Duration: Continuous
+
+📞 Emergency Response Protocol:
+1. Attempt to contact the driver immediately
+2. If no response, consider emergency services
+3. Check driver location and status
+
+This message was generated automatically by the driver safety monitoring system.
             """
             
-            msg = MIMEText(body)
-            msg['Subject'] = subject
-            msg['From'] = sender_email
+            message.attach(MIMEText(body, "plain"))
             
-            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            # Send email to all emergency contacts
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
                 server.starttls()
                 server.login(sender_email, password)
                 for contact in emergency_contacts:
-                    msg['To'] = contact
-                    server.send_message(msg)
-                    del msg['To']
+                    message["To"] = contact
+                    text = message.as_string()
+                    server.sendmail(sender_email, contact, text)
+                    del message["To"]
             
-            print("Emergency alert sent!")
+            print(f"📧 Emergency alert sent to {len(emergency_contacts)} contact(s)")
             drunk_alert_sent = True
             
         except Exception as e:
-            print(f"Failed to send alert: {e}")
+            print(f"❌ Failed to send emergency alert: {e}")
+            print("   Please check email configuration in emergency_config.json")
     
-    # Send in separate thread
+    # Send in separate thread to avoid blocking detection
     alert_thread = Thread(target=send_email)
     alert_thread.daemon = True
     alert_thread.start()
@@ -359,7 +463,7 @@ def checkEyeStatus(landmarks, frame):
     rightEAR = eye_aspect_ratio(hullRightEye)
     ear = (leftEAR + rightEAR) / 2.0
     
-    if session_tracker:
+    if 'session_tracker' in globals() and session_tracker:
         session_tracker.add_ear_value(ear)
 
     eyeStatus = 1 if ear >= thresh else 0
@@ -385,11 +489,11 @@ def checkBlinkStatus(eyeStatus):
             state = 0
             drowsy = 3
             blinkCount += 1
-            if session_tracker:
+            if 'session_tracker' in globals() and session_tracker:
                 session_tracker.add_drowsy_alert()
         else:
             drowsy = 3
-            if session_tracker:
+            if 'session_tracker' in globals() and session_tracker:
                 session_tracker.add_drowsy_alert()
 
 def getLandmarks(im):
@@ -426,7 +530,7 @@ def analyze_drunk_indicators(landmarks, frame, ear, current_time):
     # Droopy eyelids detection
     drunk_indicators['droopy_eyelids'] = detect_droopy_eyelids(landmarks)
     
-    # Eye redness analysis
+    # Eye redness analysis with improved error handling
     try:
         left_eye_points = np.array([landmarks[i] for i in leftEyeIndex])
         right_eye_points = np.array([landmarks[i] for i in rightEyeIndex])
@@ -434,7 +538,7 @@ def analyze_drunk_indicators(landmarks, frame, ear, current_time):
         left_rect = cv2.boundingRect(left_eye_points)
         right_rect = cv2.boundingRect(right_eye_points)
         
-        padding = 5
+        padding = 8
         left_eye_region = frame[
             max(0, left_rect[1]-padding):left_rect[1]+left_rect[3]+padding,
             max(0, left_rect[0]-padding):left_rect[0]+left_rect[2]+padding
@@ -449,63 +553,116 @@ def analyze_drunk_indicators(landmarks, frame, ear, current_time):
         drunk_indicators['red_eyes'] = left_red or right_red
         
     except Exception as e:
-        print(f"Error in eye redness analysis: {e}")
         drunk_indicators['red_eyes'] = False
     
     # Track impairment alerts
-    if any(drunk_indicators.values()) and session_tracker:
-        session_tracker.add_drunk_alert()
+    active_indicators = sum(drunk_indicators.values())
+    if active_indicators > 0 and 'session_tracker' in globals() and session_tracker:
+        session_tracker.add_drunk_alert(drunk_indicators)
     
     return head_angles
 
-def draw_drunk_indicators(frame, head_angles):
-    """Draw drunk detection indicators on frame"""
-    y_offset = 120
+def draw_drunk_indicators(frame, head_angles, ear):
+    """Draw drunk detection indicators and enhanced UI on frame"""
     
+    # Background overlay for better text visibility
+    overlay = frame.copy()
+    cv2.rectangle(overlay, (0, 0), (frame.shape[1], 200), (0, 0, 0), -1)
+    frame = cv2.addWeighted(frame, 0.7, overlay, 0.3, 0)
+    
+    # Main EAR display
+    ear_color = (0, 255, 0) if ear > thresh else (0, 0, 255)
+    cv2.putText(frame, f"EAR: {ear:.3f}", (10, 30),
+               cv2.FONT_HERSHEY_SIMPLEX, 0.8, ear_color, 2)
+    
+    # Blink counter
+    cv2.putText(frame, f"Blinks: {blinkCount}", (10, 60),
+               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    
+    # Head pose information
+    cv2.putText(frame, f"Head: P{head_angles[0]:.1f}° Y{head_angles[1]:.1f}° R{head_angles[2]:.1f}°",
+               (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
+    
+    # Impairment indicators
     active_indicators = sum(drunk_indicators.values())
     
     if active_indicators > 0:
+        # Main indicator count
+        indicator_color = (0, 165, 255) if active_indicators < 3 else (0, 0, 255)
         cv2.putText(frame, f"IMPAIRMENT INDICATORS: {active_indicators}/4", 
-                   (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
-        y_offset += 30
+                   (10, 125), cv2.FONT_HERSHEY_SIMPLEX, 0.8, indicator_color, 2)
         
-        for indicator, status in drunk_indicators.items():
-            if status:
-                indicator_text = indicator.replace('_', ' ').title()
-                cv2.putText(frame, f"- {indicator_text}", (20, y_offset),
+        # Individual indicators
+        y_offset = 155
+        indicator_names = {
+            'head_sway': 'Head Movement',
+            'delayed_blink': 'Slow Blinking', 
+            'red_eyes': 'Eye Redness',
+            'droopy_eyelids': 'Droopy Eyes'
+        }
+        
+        for key, name in indicator_names.items():
+            if drunk_indicators[key]:
+                cv2.putText(frame, f"• {name}", (20, y_offset),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
                 y_offset += 25
     
-    # Display head angles
-    cv2.putText(frame, f"Head: P{head_angles[0]:.1f} Y{head_angles[1]:.1f} R{head_angles[2]:.1f}",
-               (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    # Session info (bottom right)
+    if 'session_tracker' in globals() and session_tracker:
+        session_duration = (datetime.now() - session_start_time).total_seconds() / 60
+        cv2.putText(frame, f"Session: {session_duration:.1f}min", 
+                   (frame.shape[1] - 180, frame.shape[0] - 60),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(frame, f"Alerts: D{session_alerts} I{session_tracker.drunk_alerts}", 
+                   (frame.shape[1] - 180, frame.shape[0] - 30),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
 def main():
-    """Main detection loop"""
-    global session_tracker, drowsyLimit, falseBlinkLimit, frame
+    """Main detection loop with enhanced error handling and features"""
+    global session_tracker, drowsyLimit, falseBlinkLimit, frame, drowsy, ALARM_ON
     
-    # Initialize camera
-    capture = cv2.VideoCapture(0)
+    print("🚀 Starting Enhanced Driver Detection System...")
+    print("🔧 Initializing camera and calibration...")
     
+    # Initialize camera with better error handling
+    for camera_index in range(3):  # Try multiple camera indices
+        capture = cv2.VideoCapture(camera_index)
+        if capture.isOpened():
+            print(f"📹 Camera {camera_index} initialized successfully")
+            break
+        capture.release()
+    else:
+        print("❌ Error: Could not access any camera")
+        input("Press Enter to exit...")
+        sys.exit(1)
+
+    # Test camera capture
     for i in range(10):
         ret, frame = capture.read()
-        if not capture.isOpened():
-            print("Error: Could not open webcam.")
-            sys.exit()
+        if ret and frame is not None:
+            break
+        time.sleep(0.1)
+    else:
+        print("❌ Error: Could not read frames from camera")
+        capture.release()
+        sys.exit(1)
 
-    # Calibration phase
+    # Calibration phase with progress indication
     totalTime = 0.0
     validFrames = 0
     dummyFrames = 100
 
-    print("Enhanced Detection System - Calibration in Progress!")
+    print(f"🎯 Calibrating detection system ({dummyFrames} frames)...")
+    
     while validFrames < dummyFrames:
         validFrames += 1
         t = time.time()
         ret, frame = capture.read()
+        
         if not ret or frame is None:
-            print("Error: Could not read frame from webcam.")
-            break 
+            print("⚠️  Frame read error during calibration")
+            validFrames -= 1
+            continue
 
         height, width = frame.shape[:2]
         IMAGE_RESIZE = np.float32(height)/RESIZE_HEIGHT
@@ -520,45 +677,78 @@ def main():
 
         if landmarks == 0:
             validFrames -= 1
-            cv2.putText(frame, "Unable to detect face, Please check proper lighting", 
-                       (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
-            cv2.putText(frame, "or decrease FACE_DOWNSAMPLE_RATIO", 
-                       (10, 50), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
-            cv2.imshow("Enhanced Detection System", frame)
-            if cv2.waitKey(1) & 0xFF == 27:
-                break
+            # Show calibration progress
+            progress = f"Calibration Progress: {validFrames}/{dummyFrames}"
+            cv2.putText(frame, progress, (10, 30), 
+                       cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(frame, "Position your face clearly in camera view", 
+                       (10, 70), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 255), 2)
+            cv2.putText(frame, "Ensure good lighting conditions", 
+                       (10, 100), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 255), 2)
+            cv2.imshow("Enhanced Detection System - Calibration", frame)
+            if cv2.waitKey(1) & 0xFF == 27:  # ESC key
+                capture.release()
+                cv2.destroyAllWindows()
+                sys.exit(0)
         else:
             totalTime += timeLandmarks
+            # Show successful calibration frame
+            progress = f"Calibration: {validFrames}/{dummyFrames}"
+            cv2.putText(frame, progress, (10, 30), 
+                       cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(frame, "Face detected successfully!", 
+                       (10, 70), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.imshow("Enhanced Detection System - Calibration", frame)
+            cv2.waitKey(1)
 
-    print("Calibration Complete!")
+    print("✅ Calibration completed successfully!")
 
     spf = totalTime/dummyFrames
-    print(f"Current SPF (seconds per frame) is {spf * 1000:.2f} ms")
+    print(f"📊 Performance: {spf * 1000:.2f} ms per frame")
 
-    drowsyLimit = drowsyTime/spf
-    falseBlinkLimit = blinkTime/spf
-    print(f"Drowsy limit: {drowsyLimit}, False blink limit: {falseBlinkLimit}")
+    drowsyLimit = int(drowsyTime/spf)
+    falseBlinkLimit = int(blinkTime/spf)
+    print(f"🎯 Detection thresholds - Drowsy: {drowsyLimit}, Blink: {falseBlinkLimit}")
 
-    # Start session tracking
+    # Initialize session tracking
     session_tracker = SessionTracker()
     
-    vid_writer = cv2.VideoWriter('output-enhanced-detection.avi',
-                                cv2.VideoWriter_fourcc('M','J','P','G'), 
-                                15, (frame.shape[1], frame.shape[0]))
+    # Initialize video writer
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    vid_writer = cv2.VideoWriter(f'enhanced_detection_session_{timestamp}.avi',
+                                fourcc, 15, (frame.shape[1], frame.shape[0]))
     
-    print("\nEnhanced Driver Detection System Started")
-    print("Features: Drowsiness + Drunk Driver Detection + Session Tracking")
-    print("Press 'q' to quit, 'r' to reset")
+    print("\n" + "="*60)
+    print("🚀 ENHANCED DRIVER DETECTION SYSTEM - ACTIVE")
+    print("="*60)
+    print("🎯 Features Active:")
+    print("   • Real-time drowsiness detection")
+    print("   • Advanced impairment analysis") 
+    print("   • Emergency alert system")
+    print("   • Session tracking & analytics")
+    print("\n⌨️  Controls:")
+    print("   • 'q' - Quit system")
+    print("   • 'r' - Reset all alerts") 
+    print("   • ESC - Emergency exit")
+    print("="*60 + "\n")
+    
+    frame_count = 0
+    last_stats_time = time.time()
     
     # Main detection loop
-    while True:
-        try:
+    try:
+        while True:
             current_time = time.time()
             ret, frame = capture.read()
             
-            if not ret:
+            if not ret or frame is None:
+                print("⚠️  Camera disconnected or frame read error")
                 break
                 
+            frame_count += 1
+            
+            # Resize frame for processing
             height, width = frame.shape[:2]
             IMAGE_RESIZE = np.float32(height)/RESIZE_HEIGHT
             frame = cv2.resize(frame, None, 
@@ -570,35 +760,38 @@ def main():
             landmarks = getLandmarks(adjusted)
             
             if landmarks == 0:
-                cv2.putText(frame, "Unable to detect face, Please check proper lighting", 
-                           (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+                cv2.putText(frame, "⚠️  No face detected - Please check lighting and position", 
+                           (10, 50), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 0, 255), 2)
+                cv2.putText(frame, "System Status: Waiting for face detection", 
+                           (10, 80), cv2.FONT_HERSHEY_COMPLEX, 0.6, (255, 255, 0), 2)
                 cv2.imshow("Enhanced Detection System", frame)
-                if cv2.waitKey(1) & 0xFF == 27:
+                if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
                 continue
 
-            # Original drowsiness detection
+            # Core drowsiness detection
             eyeStatus, ear = checkEyeStatus(landmarks, frame)
             checkBlinkStatus(eyeStatus)
 
-            # Drunk detection analysis
+            # Advanced impairment detection
             head_angles = analyze_drunk_indicators(landmarks, frame, ear, current_time)
 
             # Draw eye landmarks
             for i in leftEyeIndex + rightEyeIndex:
                 cv2.circle(frame, (landmarks[i][0], landmarks[i][1]), 
-                          1, (0, 0, 255), -1, lineType=cv2.LINE_AA)
+                          2, (0, 255, 0), -1, lineType=cv2.LINE_AA)
 
-            # Display EAR and blink count
-            cv2.putText(frame, f"EAR: {ear:.2f}", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(frame, f"Blinks: {blinkCount}", (10, 60),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            # Enhanced UI display
+            draw_drunk_indicators(frame, head_angles, ear)
 
-            # Drowsiness alert
-            if drowsy:
-                cv2.putText(frame, "! ! ! DROWSINESS ALERT ! ! !", (70, 90), 
-                           cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            # Drowsiness alert handling
+            if drowsy > 0:
+                drowsy -= 1
+                cv2.putText(frame, "🚨 DROWSINESS ALERT 🚨", (50, frame.shape[0] - 100), 
+                           cv2.FONT_HERSHEY_COMPLEX, 1.2, (0, 0, 255), 3, cv2.LINE_AA)
+                cv2.putText(frame, "Driver appears to be falling asleep!", (50, frame.shape[0] - 60), 
+                           cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                
                 if not ALARM_ON:
                     ALARM_ON = True
                     threadStatusQ.put(not ALARM_ON)
@@ -606,44 +799,95 @@ def main():
                     thread.setDaemon(True)
                     thread.start()
             else:
-                ALARM_ON = False
-
-            # Draw impairment indicators
-            draw_drunk_indicators(frame, head_angles)
+                if ALARM_ON:
+                    ALARM_ON = False
+                    threadStatusQ.put(True)  # Stop alarm
 
             # Emergency alert conditions
             drunk_indicators_count = sum(drunk_indicators.values())
-            if (drunk_indicators_count >= 2 and drowsy) or drunk_indicators_count >= 3:
-                send_emergency_alert()
-                cv2.putText(frame, "!!! EMERGENCY ALERT SENT !!!", (50, frame.shape[0] - 50),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+            severe_impairment = (drunk_indicators_count >= 2 and drowsy > 0) or drunk_indicators_count >= 3
+            
+            if severe_impairment and not drunk_alert_sent:
+                severity = "CRITICAL" if drunk_indicators_count >= 3 and drowsy > 0 else "HIGH"
+                send_emergency_alert("SEVERE IMPAIRMENT", severity)
+                
+                # Visual emergency alert
+                cv2.rectangle(frame, (0, frame.shape[0] - 150), (frame.shape[1], frame.shape[0]), (0, 0, 255), -1)
+                cv2.putText(frame, "🆘 EMERGENCY ALERT SENT 🆘", (50, frame.shape[0] - 100),
+                           cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
+                cv2.putText(frame, "Severe impairment detected - Contacts notified", (50, frame.shape[0] - 60),
+                           cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
 
+            # Show main detection window
             cv2.imshow("Enhanced Detection System", frame)
             vid_writer.write(frame)
 
-            k = cv2.waitKey(1) 
-            if k == ord('r'):
-                # Reset all states
+            # Print periodic statistics
+            if current_time - last_stats_time > 30:  # Every 30 seconds
+                if session_tracker:
+                    stats = session_tracker.get_session_stats()
+                    print(f"📊 Session Update - EAR: {current_ear:.3f}, "
+                          f"Blinks: {stats.get('total_blinks', 0)}, "
+                          f"Alerts: D{stats.get('drowsy_alerts', 0)}/I{stats.get('impairment_alerts', 0)}")
+                last_stats_time = current_time
+
+            # Handle keyboard input
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                print("🛑 Quit command received")
+                break
+            elif key == ord('r'):
+                # Reset all detection states
+                print("🔄 Resetting all alerts and detection states...")
                 state = 0
                 drowsy = 0
                 ALARM_ON = False
                 drunk_alert_sent = False
                 drunk_indicators = {k: False for k in drunk_indicators}
-                threadStatusQ.put(not ALARM_ON)
-                print("All alerts reset")
-            elif k == ord('q'):
+                head_positions.clear()
+                blink_durations.clear()
+                threadStatusQ.put(True)  # Stop any active alarms
+                print("✅ All alerts reset successfully")
+            elif key == 27:  # ESC key
+                print("🚨 Emergency exit")
                 break
 
+    except KeyboardInterrupt:
+        print("\n🛑 Interrupted by user (Ctrl+C)")
+    except Exception as e:
+        print(f"❌ Unexpected error in main loop: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    finally:
+        # Cleanup and session summary
+        print("\n🔄 Shutting down Enhanced Detection System...")
+        
+        # Stop any active alarms
+        if ALARM_ON:
+            threadStatusQ.put(True)
+            
+        # End session and show summary
+        if session_tracker:
+            session_tracker.end_session()
+
+        # Release resources
+        try:
+            capture.release()
+            vid_writer.release()
+            cv2.destroyAllWindows()
+            print("✅ Resources released successfully")
         except Exception as e:
-            print(f"Error in main loop: {e}")
-
-    # Cleanup
-    if session_tracker:
-        session_tracker.end_session()
-
-    capture.release()
-    vid_writer.release()
-    cv2.destroyAllWindows()
+            print(f"⚠️  Error during cleanup: {e}")
+        
+        print("👋 Enhanced Detection System shutdown complete")
+        print("Thank you for using the driver safety system!")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"❌ Critical error: {e}")
+        import traceback
+        traceback.print_exc()
+        input("Press Enter to exit...")
