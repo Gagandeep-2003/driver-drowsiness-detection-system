@@ -7,6 +7,25 @@ import av
 import threading
 import time
 import base64
+import zipfile
+import os
+import zipfile
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
+from tensorflow.keras.models import load_model
+MODEL_ZIP = r"models/ML_Models/resnet_model.zip"
+MODEL_DIR = r"models/ML_Models/resnet_model"  # Folder where it will be extracted
+
+# Unzip only if the folder doesn't already exist
+if not os.path.exists(MODEL_DIR):
+    with zipfile.ZipFile(MODEL_ZIP, 'r') as zip_ref:
+        zip_ref.extractall(MODEL_DIR)
+
+# Now load the model
+try:
+    model = load_model(MODEL_DIR)
+    print("✅ Model loaded successfully")
+except Exception as e:
+    print("❌ Failed to load model:", e)
 
 # Eye aspect ratio threshold and consecutive frames
 EAR_THRESHOLD = 0.25
@@ -45,6 +64,18 @@ class DrowsinessDetector(VideoTransformerBase):
         self.frame_count = 0
         self.drowsy = False
 
+    def preprocess_eye(self, img, eye_landmarks):
+        # Crop around the eye landmarks
+        x_coords = [p[0] for p in eye_landmarks]
+        y_coords = [p[1] for p in eye_landmarks]
+        x_min, x_max = max(min(x_coords)-5, 0), min(max(x_coords)+5, img.shape[1])
+        y_min, y_max = max(min(y_coords)-5, 0), min(max(y_coords)+5, img.shape[0])
+        
+        eye_img = img[y_min:y_max, x_min:x_max]
+        eye_img = cv2.resize(eye_img, (224, 224))  # Match your ResNet input size
+        eye_img = eye_img / 255.0
+        return np.expand_dims(eye_img, axis=0)
+
     def transform(self, frame):
         global alarm_thread
         img = frame.to_ndarray(format="bgr24")
@@ -56,15 +87,36 @@ class DrowsinessDetector(VideoTransformerBase):
                 h, w, _ = img.shape
                 landmarks = [(int(l.x * w), int(l.y * h)) for l in face_landmarks.landmark]
 
-                # Left and right eyes
-                left_eye = [362, 385, 387, 263, 373, 380]
-                right_eye = [33, 160, 158, 133, 153, 144]
+                left_eye_idx = [362, 385, 387, 263, 373, 380]
+                right_eye_idx = [33, 160, 158, 133, 153, 144]
 
-                left_ear = calculate_ear(landmarks, left_eye)
-                right_ear = calculate_ear(landmarks, right_eye)
+                left_eye_pts = [landmarks[i] for i in left_eye_idx]
+                right_eye_pts = [landmarks[i] for i in right_eye_idx]
+
+                # EAR Calculation
+                left_ear = calculate_ear(landmarks, left_eye_idx)
+                right_ear = calculate_ear(landmarks, right_eye_idx)
                 ear = (left_ear + right_ear) / 2.0
 
-                if ear < EAR_THRESHOLD:
+                # Model Prediction
+                left_eye_img = self.preprocess_eye(img, left_eye_pts)
+                left_eye_img = preprocess_input(left_eye_img)  # Preprocess for ResNet
+                left_eye_img = np.expand_dims(left_eye_img, axis=0)  # Add batch dimension
+                right_eye_img = self.preprocess_eye(img, right_eye_pts)
+                right_eye_img = preprocess_input(right_eye_img)  # Preprocess for ResNet
+                right_eye_img = np.expand_dims(right_eye_img, axis=0)  # Add batch dimension
+                
+                pred_l = model.predict(left_eye_img, verbose=0)[0][0]  # assuming binary output: 0=open, 1=closed
+                pred_r = model.predict(right_eye_img, verbose=0)[0][0]
+                pred= (pred_l + pred_r) / 2.0  # Average prediction for both eyes
+                cv2.putText(img, f"Left EAR: {left_ear:.2f} | Right EAR: {right_ear:.2f}", (30, 90),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(img, f"Left Pred: {pred_l:.2f} | Right Pred: {pred_r:.2f}", (30, 120),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(img, f"Combined Pred: {pred:.2f}", (30, 150),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                # Drowsiness detection logic
+                if ear < EAR_THRESHOLD or pred > 0.5:  # combine EAR + model
                     self.frame_count += 1
                 else:
                     self.frame_count = 0
@@ -74,15 +126,15 @@ class DrowsinessDetector(VideoTransformerBase):
                     self.drowsy = True
                     cv2.putText(img, "DROWSY!", (30, 60),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 4)
-                    # Play alarm in separate thread
                     if alarm_thread is None or not alarm_thread.is_alive():
                         alarm_thread = threading.Thread(target=play_alarm)
                         alarm_thread.start()
                 else:
-                    cv2.putText(img, f"EAR: {ear:.2f}", (30, 30),
+                    cv2.putText(img, f"EAR: {ear:.2f} | Pred: {pred:.2f}", (30, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
         return img
+
 
 # Streamlit app
 st.set_page_config(
