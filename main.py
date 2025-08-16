@@ -36,6 +36,13 @@ def toggle_theme(root, frame, toggle_btn):
 
     is_dark_mode = not is_dark_mode
 
+def run_analysis():
+    try:
+        subprocess.call(["python", "Session_Dashboard.py"])
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to run Session Dashboard:\n{e}")
+    
+
 def on_quit(root):
     if face_proc and face_proc.poll() is None:
         face_proc.terminate()
@@ -46,7 +53,6 @@ def main():
     root.title("Driver Drowsiness Detection System")
     root.geometry("500x500")
     root.configure(bg="#f0f0f0")  # Default light background
-
     style = ttk.Style()
     style.theme_use("clam")
 
@@ -69,6 +75,9 @@ def main():
 
     btn_blink = ttk.Button(frame, text="Blink Detection", command=run_blink_detection)
     btn_blink.grid(row=0, column=1, padx=15, pady=15)
+
+    btn_analysis = ttk.Button(frame, text="Blink Analysis", command=run_analysis)
+    btn_analysis.grid(row=1, column=0, columnspan=2, padx=15, pady=15)
 
     # Toggle button
     btn_toggle = ttk.Button(root, text="Switch to Dark Mode")
