@@ -1,0 +1,49 @@
+name: Auto Comment on Issue
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  comment:
+    if: github.event.issue.author_association == 'CONTRIBUTOR'
+
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Add Comment to Issue
+        uses: actions/github-script@5a0899f2e308f95c467a5b3a4369a3048590c74b
+        with:
+          script: |
+            const commentMarker = '';
+            const issueNumber = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: issueNumber,
+            });
+
+            const hasComment = comments.some(comment => comment.body.includes(commentMarker));
+
+            if (hasComment) {
+              console.log('Comment already exists, skipping.');
+              return;
+            }
+
+            const commentBody = `### Thank you for raising this issue!\nWe'll review it as soon as possible. We truly appreciate your contributions! ✨\n\n> Meanwhile make sure you've visited the \`README.md\`, \`CONTRIBUTING.md\`, and \`CODE_OF_CONDUCT.md\` before creating a PR for this. Also, please do NOT create a PR until this issue has been assigned to you. 😊\n\n${commentMarker}`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              body: commentBody
+            });
+
+            console.log('Comment added successfully.');
