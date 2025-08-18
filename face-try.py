@@ -4,11 +4,19 @@ Created on Sun Dec 29 18:48:12 2019
 
 @author: Lenovo
 """
+import os
 import cv2
 import sys
 
 # Load Haar cascade
-cascade_path = '/home/happy/gssoc/driver-drowsiness-detection-system/models/haarcascade_frontalface_default.xml'
+#Absolute path
+#cascade_path = '/home/happy/gssoc/driver-drowsiness-detection-system/models/haarcascade_frontalface_default.xml'
+
+#relative path
+BASE_DIR=os.path.dirname(os.path.abspath(__file__))
+cascade_path = os.path.join(BASE_DIR,'models','haarcascade_frontalface_default.xml')
+
+
 face_cascade = cv2.CascadeClassifier(cascade_path)
 
 # Check if cascade loaded successfully
