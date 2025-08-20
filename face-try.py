@@ -27,6 +27,11 @@ if face_cascade.empty():
 # Start video capture
 cap = cv2.VideoCapture(0)
 
+#check for external if built-in camera is not working 
+if not cap.isOpened():
+    print("[WARNING] Camera index 0 not available, trying index 1.....")
+    cap.cv2.VideoCapture(1)
+
 if not cap.isOpened():
     print("[ERROR] Cannot access webcam.")
     sys.exit(1)
