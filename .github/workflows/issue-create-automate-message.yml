@@ -3,47 +3,98 @@ name: Auto Comment on Issue
 on:
   issues:
     types: [opened]
+  workflow_dispatch: {}  # optional: lets you test the script manually
 
 permissions:
-  contents: read
   issues: write
+  reactions: write
+
+concurrency:
+  group: issue-${{ github.event.issue.number }}-autocomment
+  cancel-in-progress: true
 
 jobs:
   comment:
-    if: github.event.issue.author_association == 'CONTRIBUTOR'
-
+    # Skip bots and only run for outside folks
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.issue.user.type != 'Bot' &&
+        contains(fromJson('["NONE","FIRST_TIME_CONTRIBUTOR","CONTRIBUTOR"]'), github.event.issue.author_association) &&
+        !contains(github.event.issue.title, '[skip-autoreply]') &&
+        !contains(github.event.issue.body || '', '[skip-autoreply]') &&
+        !contains(join(github.event.issue.labels.*.name, ','), 'no-bot')
+      )
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Add Comment to Issue
-        uses: actions/github-script@5a0899f2e308f95c467a5b3a4369a3048590c74b
+      - name: Auto-triage & comment
+        uses: actions/github-script@v7
         with:
           script: |
-            const commentMarker = '';
-            const issueNumber = context.issue.number;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const issue_number = context.payload.issue?.number || context.issue.number;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number: issueNumber,
+            // Hidden marker to avoid duplicates
+            const COMMENT_MARKER = '<!-- auto-comment-marker:v1 -->';
+
+            // 1) Ensure "needs triage" label exists; create if missing (best-effort)
+            const triageLabel = 'needs triage';
+            try {
+              const allLabels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+              const hasTriage = allLabels.some(l => l.name.toLowerCase() === triageLabel.toLowerCase());
+              if (!hasTriage) {
+                await github.rest.issues.createLabel({
+                  owner, repo,
+                  name: triageLabel,
+                  color: 'FBCA04',
+                  description: 'Awaiting maintainer triage'
+                }).catch(() => {}); // ignore race if another run creates it
+              }
+              const currentIssue = context.payload.issue;
+              if (currentIssue) {
+                const existing = (currentIssue.labels || []).map(l => l.name.toLowerCase());
+                if (!existing.includes(triageLabel.toLowerCase())) {
+                  await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [triageLabel] });
+                }
+              }
+            } catch (e) {
+              console.log('Label step skipped/failed (non-fatal):', e.message);
+            }
+
+            // 2) Avoid duplicate comments (paginate all comments)
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100
             });
-
-            const hasComment = comments.some(comment => comment.body.includes(commentMarker));
-
-            if (hasComment) {
+            const hasMarker = comments.some(c => (c.body || '').includes(COMMENT_MARKER));
+            if (hasMarker) {
               console.log('Comment already exists, skipping.');
               return;
             }
 
-            const commentBody = `### Thank you for raising this issue!\nWe'll review it as soon as possible. We truly appreciate your contributions! ✨\n\n> Meanwhile make sure you've visited the \`README.md\`, \`CONTRIBUTING.md\`, and \`CODE_OF_CONDUCT.md\` before creating a PR for this. Also, please do NOT create a PR until this issue has been assigned to you. 😊\n\n${commentMarker}`;
+            // 3) Craft the message (dynamic author mention when available)
+            const author = context.payload.issue?.user?.login || 'there';
+            const message = `### Thanks for opening this issue, @${author}! ✨
+
+We'll review it as soon as possible. We truly appreciate your contribution.
+
+> In the meantime, please confirm you’ve read the \`README.md\`, \`CONTRIBUTING.md\`, and \`CODE_OF_CONDUCT.md\`.
+> Also, please **do not** open a PR until a maintainer has assigned this issue to you. 😊
+
+${COMMENT_MARKER}`;
 
             await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              body: commentBody
+              owner, repo, issue_number, body: message
             });
 
-            console.log('Comment added successfully.');
+            // 4) Add a friendly reaction (non-fatal)
+            try {
+              await github.rest.reactions.createForIssue({
+                owner, repo, issue_number, content: 'heart'
+              });
+            } catch (e) {
+              console.log('Reaction failed (non-fatal):', e.message);
+            }
+
+            console.log('Auto-comment complete.');
