@@ -1,9 +1,8 @@
+# ====================================================================================================================================
+# ENHANCED DRIVER DROWSINESS & IMPAIRMENT DETECTION SYSTEM - REQUIREMENTS
 # ====================================================================
-# DRIVER DROWSINESS DETECTION SYSTEM - REQUIREMENTS
-# ====================================================================
-# This file contains all the Python dependencies required to run the
-# driver drowsiness detection system. Each package is carefully versioned
-# to ensure compatibility and stable performance.
+# This file contains all Python dependencies for the enhanced system
+# including drunk driver detection and emergency alert capabilities
 #
 # INSTALLATION INSTRUCTIONS:
 # 1. Create a virtual environment (recommended):
@@ -40,7 +39,16 @@ scipy>=1.7.0,<2.0.0
 # AUDIO PROCESSING AND ALERTS
 # ====================================================================
 playsound>=1.2.2,<2.0.0
-playsound; platform_system == "Windows"  # For compatibility on Windows
+
+# ====================================================================
+# EMAIL AND EMERGENCY ALERT SYSTEM
+# ====================================================================
+# Built-in libraries used: smtplib, email.mime.text, email.mime.multipart
+# No additional packages needed for basic email functionality
+
+# For enhanced email features (optional):
+# yagmail>=0.15.0,<1.0.0  # Simplified Gmail sending
+# sendgrid>=6.9.0,<7.0.0  # SendGrid API support
 
 # ====================================================================
 # DATA VISUALIZATION AND PLOTTING
@@ -57,33 +65,87 @@ mediapipe>=0.10.0,<1.0.0
 # ====================================================================
 # PWA (PROGRESSIVE WEB APP) DEPENDENCIES
 # ====================================================================
-# For generating PWA icons and assets
 Pillow>=8.0.0,<11.0.0
 
 # ====================================================================
 # WEB SERVING AND STATIC FILES
 # ====================================================================
-# Additional web server capabilities for PWA
-aiofiles>=0.7.0,<1.0.0  # For async file serving
+aiofiles>=0.7.0,<1.0.0
 
 # ====================================================================
-# BUILT-IN PYTHON LIBRARIES (No installation required)
+# CONFIGURATION AND DATA HANDLING
 # ====================================================================
-# - tkinter
-# - threading
-# - queue
-# - subprocess
-# - time
-# - sys
+# Built-in libraries used: json, os, threading, queue, collections
+# No additional packages needed
+
+# ====================================================================
+# ENHANCED FEATURES DEPENDENCIES
+# ====================================================================
+# For head pose estimation and advanced computer vision
+# All functionality uses OpenCV and dlib - no additional packages needed
+
+# For mathematical calculations (euler angles, etc.)
+# Uses built-in math library and numpy
+
+# ====================================================================
+# GUI DEPENDENCIES
+# ====================================================================
+# tkinter - Built-in with Python
+# No additional packages needed for GUI
+
+# ====================================================================
+# BUILT-IN PYTHON LIBRARIES USED (No installation required)
+# ====================================================================
+# Core libraries:
+# - tkinter (GUI)
+# - threading (Multi-threading)
+# - queue (Thread communication)
+# - subprocess (Process management)
+# - time (Time operations)
+# - sys (System operations)
+# - os (Operating system interface)
+# - json (JSON handling)
+# - collections (deque for data storage)
+# - math (Mathematical operations)
+# - smtplib (Email sending)
+# - email.mime.text, email.mime.multipart (Email formatting)
+
+# ====================================================================
+# OPTIONAL ENHANCEMENTS
+# ====================================================================
+# For production deployment:
+# gunicorn>=20.1.0,<21.0.0  # WSGI server
+# nginx  # Reverse proxy (system package)
+
+# For advanced logging:
+# loguru>=0.6.0,<1.0.0
+
+# For configuration management:
+# python-dotenv>=0.19.0,<1.0.0
+
+# For database support (future feature):
+# sqlite3  # Built-in with Python
+# sqlalchemy>=1.4.0,<2.0.0  # Optional ORM
 
 # ====================================================================
 # COMPATIBILITY NOTES
 # ====================================================================
-# Python Version: Tested with Python 3.7 - 3.10
+# Python Version: Tested with Python 3.7 - 3.11
 # Operating Systems: Windows 10/11, macOS 10.15+, Ubuntu 18.04+
 # 
 # TROUBLESHOOTING:
-# - If dlib installation fails, install Visual Studio Build Tools (Windows)
-# - For macOS users, install Xcode command line tools: xcode-select --install
-# - Linux users may need: sudo apt-get install cmake libopenblas-dev liblapack-dev
-# ====================================================================
+# - If dlib installation fails:
+#   * Windows: Install Visual Studio Build Tools
+#   * macOS: Install Xcode command line tools: xcode-select --install
+#   * Linux: sudo apt-get install cmake libopenblas-dev liblapack-dev
+# 
+# - For email functionality:
+#   * Use Gmail App Passwords (not regular password)
+#   * Enable 2-factor authentication on Gmail
+#   * Generate app-specific password in Google Account settings
+# 
+# - For webcam access issues:
+#   * Ensure camera permissions are granted
+#   * Check if other applications are using the camera
+#   * Try different camera indices (0, 1, 2, etc.)
+# ====
