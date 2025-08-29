@@ -24,13 +24,28 @@ if face_cascade.empty():
     print(f"[ERROR] Failed to load cascade from {cascade_path}")
     sys.exit(1)
 
-# Start video capture
-cap = cv2.VideoCapture(0)
 
-#check for external if built-in camera is not working 
-if not cap.isOpened():
-    print("[WARNING] Camera index 0 not available, trying index 1.....")
-    cap.cv2.VideoCapture(1)
+
+#checking camera 
+def check_camera(idx):
+    cap = cv2.VideoCapture(idx)
+    if not cap.isOpened():
+        return None
+    
+    ok, _ = cap.read()
+    if not ok:
+        cap.release()
+        return None
+
+    return cap
+
+# Start video capture
+cap = check_camera(0)
+
+if cap is None:
+    print("[WARNING] Built-In camera failed.Trying external camera...")
+    cap = check_camera(1)
+
 
 if not cap.isOpened():
     print("[ERROR] Cannot access webcam.")
@@ -66,5 +81,6 @@ except KeyboardInterrupt:
     print("\n[INFO] Exiting on Ctrl+C")
 
 finally:
-    cap.release()
-    cv2.destroyAllWindows()
+    if cap:
+        cap.release()
+    cv2.destroyAllWindows()     
