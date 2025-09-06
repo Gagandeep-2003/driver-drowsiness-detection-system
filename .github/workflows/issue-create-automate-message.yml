@@ -7,7 +7,6 @@ on:
 
 permissions:
   issues: write
-  reactions: write
 
 concurrency:
   group: issue-${{ github.event.issue.number }}-autocomment
@@ -75,14 +74,7 @@ jobs:
 
             // 3) Craft the message (dynamic author mention when available)
             const author = context.payload.issue?.user?.login || 'there';
-            const message = `### Thanks for opening this issue, @${author}! ✨
-
-We'll review it as soon as possible. We truly appreciate your contribution.
-
-> In the meantime, please confirm you’ve read the \`README.md\`, \`CONTRIBUTING.md\`, and \`CODE_OF_CONDUCT.md\`.
-> Also, please **do not** open a PR until a maintainer has assigned this issue to you. 😊
-
-${COMMENT_MARKER}`;
+            const message = `### Thanks for opening this issue, @${author}! ✨We'll review it as soon as possible. We truly appreciate your contribution.> In the meantime, please confirm you’ve read the \`README.md\`, \`CONTRIBUTING.md\`, and \`CODE_OF_CONDUCT.md\`.> Also, please **do not** open a PR until a maintainer has assigned this issue to you. 😊${COMMENT_MARKER}`;
 
             await github.rest.issues.createComment({
               owner, repo, issue_number, body: message
