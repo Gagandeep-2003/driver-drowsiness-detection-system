@@ -24,12 +24,21 @@ if face_cascade.empty():
     print(f"[ERROR] Failed to load cascade from {cascade_path}")
     sys.exit(1)
 
-# Start video capture
+print("[INFO] Trying to open default webcam (0)...")
 cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
-    print("[ERROR] Cannot access webcam.")
+    print("[WARNING] Default webcam not available. Trying external camera (1)...")
+    cap = cv2.VideoCapture(1)
+
+if not cap.isOpened():
+    print("[WARNING] No webcam found. Falling back to test video (test2.mp4)...")
+    cap = cv2.VideoCapture("test2.mp4")
+
+if not cap.isOpened():
+    print("[ERROR] No camera or video source available.")
     sys.exit(1)
+
 
 try:
     while True:
