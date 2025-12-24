@@ -1,4 +1,4 @@
-# Driver Drowsiness De## Key Features
+# Driver Drowsiness Detection Key Features
 - Real-time monitoring of driver's eyes using a camera
 - Fatigue and drowsiness detection algorithm
 - Timely alerts to prevent the driver from falling asleep
@@ -170,11 +170,30 @@ Features:
 - **PWA installable web app**
 - **Offline caching support**
 
-**Note:** Please do not add a license section. A contributor will be adding license information soon.
-
 If you have any questions or need guidance, feel free to open an issue or ask in the discussions!
 
 ---
+
+## 👥 Contributors
+
+Thanks to these wonderful people for contributing 💖
+
+<!-- contrib.rocks: auto-updating avatars grid -->
+[![Contributors](https://contrib.rocks/image?repo=Gagandeep-2003/driver-drowsiness-detection-system)](https://github.com/Gagandeep-2003/driver-drowsiness-detection-system/graphs/contributors)
+
+<!-- Vaunt.dev: auto-updating contributors graph (SVG) -->
+<p align="center">
+  <a href="https://github.com/Gagandeep-2003/driver-drowsiness-detection-system/graphs/contributors">
+    <img 
+      src="https://api.vaunt.dev/v1/github/entities/Gagandeep-2003/repositories/driver-drowsiness-detection-system/contributors?format=svg&limit=54" 
+      width="900" 
+      height="400" 
+      alt="Contributors Graph by Vaunt.dev" 
+    />
+  </a>
+</p>
+
+
 
 Thank you for your interest in improving the Driver Drowsiness Detection System! Your contributions are greatly appreciated.
 
